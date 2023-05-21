@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import Tk,Canvas,PhotoImage,messagebox
 from random import randint,choice,shuffle
 import pyperclip
+import json 
 
 FONT_NAME = "Rockwell"
 
@@ -27,22 +28,44 @@ def random_generator():
     pass_name.insert(0,password)
     pyperclip.copy(password)
 # ---------------------------- SAVE PASSWORD ------------------------------- #
-pass_path = r"""./pass_manager/passwords.txt"""
+pass_path = r"""./pass_manager/passwords.json"""
 def save_pass():
-
+    new_data = {website_name.get():{"email":email_name.get(),"password":pass_name.get()}}
     if website_name.get()=="" or pass_name.get()=="":
         messagebox.showwarning(title="Missing info",
         message=f"Website or Password are empty, please fill that fields.")
     else:
-        is_ok = messagebox.askokcancel(title=website_name.get(),
-        message=f"""Info entered:\nEmail: {email_name.get()}\nPassword: {pass_name.get()}\nIs it ok?""")
-
-        if is_ok:
-            with open(pass_path,'a') as f:
-                f.write(f"{website_name.get()} | {email_name.get()} | {pass_name.get()}\n")   
-                website_name.delete(0,'end')
-                pass_name.delete(0,'end')
-
+        try:
+            with open(pass_path,'r') as f:
+                #json.dump(new_data, f,indent=4) #write on json data 
+                #data = json.load(f) #Read json data
+                #reading old data
+                data = json.load(f)
+        except FileNotFoundError:
+             with open(pass_path,'w') as f: 
+                 json.dump(new_data,f,indent=4)
+        else:
+            #updating old data with new data
+            data.update(new_data)
+            with open(pass_path,'w') as f:
+                #saving updated data
+                json.dump(data,f,indent=4) #update json data
+        finally:
+            website_name.delete(0,'end')
+            pass_name.delete(0,'end')
+# ---------------------------- SEARCH DATA ---------------------------- #
+def search_data():
+    website_info = website_name.get()
+    try:
+        with open(pass_path,"r") as f:
+            searched_data = json.load(f)
+        messagebox.showinfo(title=website_info,
+                message=f"Email: {searched_data[website_info]['email']}\nPassword: {searched_data[website_info]['password']}")
+    except FileNotFoundError:
+        messagebox.showerror(title="File empty",message="You need to add info")
+    except KeyError as key_error:
+        messagebox.showerror(title="Key Error",message=f"The key {key_error} haven't found in the file")
+    
 # ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
 window.title("Password manager")
@@ -59,8 +82,8 @@ email = tk.Label(text="Email/Username:",font=(FONT_NAME,12),bg="white")
 email.grid(row=2,column=0)
 password = tk.Label(text="Password:",font=(FONT_NAME,12),bg="white")
 password.grid(row=3,column=0)
-website_name = tk.Entry(width=53)
-website_name.grid(row=1,column=1,columnspan=2)
+website_name = tk.Entry(width=30)
+website_name.grid(row=1,column=1)
 website_name.focus()
 email_name = tk.Entry(width=53)
 email_name.grid(row=2,column=1,columnspan=2)
@@ -72,5 +95,7 @@ generate_pass = tk.Button(text="Generate Password",font=(FONT_NAME,8),width=18,c
 generate_pass.grid(row=3,column=2)
 add_pass = tk.Button(text="ADD",width=53,font=(FONT_NAME,8),command=save_pass)
 add_pass.grid(row=4,column=1,columnspan=2)
+search = tk.Button(text="Search",font=(FONT_NAME,8),width=15,command=search_data)
+search.grid(row=1,column=2)
 
 window.mainloop()
